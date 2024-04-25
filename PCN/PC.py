@@ -7,10 +7,10 @@ import numpy as np
 class PCNet(nn.Module):
     def __init__(self):
         super(PCNet, self).__init__()
-        self.fc = nn.Linear(1, 1)  # One input feature, one output feature
+        self.fc = nn.Linear(1, 1)  # One input layer, one output layer
 
     def forward(self, x):
-        return self.fc(x)
+        return self.fc(x) #linear transformation on the input data.
 
 # Sample data: input and output
 X = torch.tensor([[1], [2], [3], [4], [5]], dtype=torch.float32)
@@ -20,8 +20,8 @@ y = torch.tensor([[2], [4], [6], [8], [10]], dtype=torch.float32)
 model = PCNet()
 
 # Define loss function and optimizer
-criterion = nn.MSELoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01)
+criterion = nn.MSELoss() #Mean Squared Error Loss
+optimizer = optim.SGD(model.parameters(), lr=0.01) #Stochastic Gradient Descent as optimization algorithm
 
 # Training loop
 for epoch in range(1000):  # 1000 epochs for demonstration

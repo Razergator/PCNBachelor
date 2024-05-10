@@ -51,7 +51,7 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
 
 # Define the PCN model
 input_size = 28 * 28  # MNIST image size
-hidden_size = 128
+hidden_size = 784
 num_layers = 2
 pcn_model = PCN(input_size, hidden_size, num_layers)
 

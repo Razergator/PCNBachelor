@@ -4,39 +4,56 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 
+
 # Define the PCNLayer class
 class PCNLayer(nn.Module):
     def __init__(self, input_size, hidden_size):
         super(PCNLayer, self).__init__()
         self.prediction = nn.Linear(hidden_size, input_size)
         self.error = nn.Linear(input_size, hidden_size)
+        self.state = torch.zeros(hidden_size)
 
     def forward(self, input_data, feedback):
-        # Compute prediction error
+        # Initialize feedback with zeros
+        feedback = torch.zeros(self.hidden_size)
+        
+        # Forward pass (error computation)
         prediction_error = input_data - feedback
         
-        # Update prediction using prediction error
-        prediction_update = self.prediction(feedback) + prediction_error
+        # Update feedback using error
+        feedback = self.error(prediction_error)
         
-        # Update error using prediction error
-        error_update = self.error(prediction_error) + input_data
-        
-        return prediction_update, error_update
-
+        return feedback, prediction_error
+    
+   
+    
 # Define the PCN class
 class PCN(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers):
         super(PCN, self).__init__()
         self.layers = nn.ModuleList([PCNLayer(input_size, hidden_size) for _ in range(num_layers)])
+        '''self.classifier = nn.Linear(hidden_size, num_classes)'''
         
     def forward(self, input_data):
+        feedbacks = []
         feedback = torch.zeros_like(input_data)  # Initialize feedback signal
         
         # Forward pass through PCN layers
         for layer in self.layers:
             prediction, feedback = layer(input_data, feedback)
+
+        # Backward pass through PCN layers
+        predictions = []
+        for layer, feedback in zip(reversed(self.layers), reversed(feedbacks)):
+            prediction = layer.backward(feedback)
+            predictions.append(prediction)
+            
+            return feedbacks, predictions
         
-        return prediction
+        # Classification layer
+        output = self.classifier(feedbacks[-1])
+
+   
 
 # Define the MNIST image transformation
 transform = transforms.Compose([

@@ -36,6 +36,7 @@ class PCN(nn.Module):
         # Forward pass through PCN layers
         for layer in self.layers:
             prediction, feedback = layer(input_data, feedback)
+            print(layer)
         
         return prediction
 

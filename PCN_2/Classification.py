@@ -11,7 +11,7 @@ class PCNLayer(nn.Module):
         super(PCNLayer, self).__init__()
         self.prediction = nn.Linear(hidden_size, input_size)
         self.error = nn.Linear(input_size, hidden_size)
-        self.state = torch.zeros(hidden_size)
+        self.state = torch.zeros(hidden_size) #placeholder for state, unsure what to do with this right now
         self.hidden_size = hidden_size
 
     def forward(self, input_data, feedback):
@@ -41,7 +41,8 @@ class PCN(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers):
         super(PCN, self).__init__()
         self.layers = nn.ModuleList([PCNLayer(input_size, hidden_size) for _ in range(num_layers)])
-        self.classifier = nn.Linear(hidden_size, num_layers)
+        self.classifier = nn.Linear(hidden_size, num_layers) #placerholder
+        self.relu = nn.ReLU() #ReLu layers which can be added
         
     def forward(self, input_data):
         
@@ -50,15 +51,16 @@ class PCN(nn.Module):
         # Forward pass through PCN layers
         for layer in self.layers:
             prediction, feedback = layer(input_data, feedback)
+            feedback = self.relu(feedback) #add ReLu layer for non-linearity
             
         # Backward pass through PCN layers
         for layer in list(reversed(self.layers)):
-            prediction = layer.backward(feedback)
+            prediction = layer.backward(prediction)
             
             return prediction
         
         # Classification layer
-        output = self.classifier()
+        output = self.classifier() #placeholder ish atm
 
    
 

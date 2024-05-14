@@ -12,6 +12,7 @@ class PCNLayer(nn.Module):
         self.prediction = nn.Linear(hidden_size, input_size)
         self.error = nn.Linear(input_size, hidden_size)
         self.state = torch.zeros(hidden_size)
+        self.hidden_size = hidden_size
 
     def forward(self, input_data, feedback):
         # Initialize feedback with zeros
@@ -25,33 +26,39 @@ class PCNLayer(nn.Module):
         
         return feedback, prediction_error
     
-   
+    def backward(self, feedback):
+        # Initialize prediction with zeros
+        prediction = torch.zeros(self.hidden_size)
+        
+        # Backward pass (prediction computation)   
+        prediction = self.prediction(feedback)
+
+        return prediction
+    
     
 # Define the PCN class
 class PCN(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers):
         super(PCN, self).__init__()
         self.layers = nn.ModuleList([PCNLayer(input_size, hidden_size) for _ in range(num_layers)])
-        '''self.classifier = nn.Linear(hidden_size, num_classes)'''
+        self.classifier = nn.Linear(hidden_size, num_layers)
         
     def forward(self, input_data):
-        feedbacks = []
+        
         feedback = torch.zeros_like(input_data)  # Initialize feedback signal
         
         # Forward pass through PCN layers
         for layer in self.layers:
             prediction, feedback = layer(input_data, feedback)
-
-        # Backward pass through PCN layers
-        predictions = []
-        for layer, feedback in zip(reversed(self.layers), reversed(feedbacks)):
-            prediction = layer.backward(feedback)
-            predictions.append(prediction)
             
-            return feedbacks, predictions
+        # Backward pass through PCN layers
+        for layer in list(reversed(self.layers)):
+            prediction = layer.backward(feedback)
+            
+            return prediction
         
         # Classification layer
-        output = self.classifier(feedbacks[-1])
+        output = self.classifier()
 
    
 

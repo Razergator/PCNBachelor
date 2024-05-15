@@ -3,7 +3,10 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
 
+
+losses = [] #list for visualizing loss
 
 # Define the PCNLayer class
 class PCNLayer(nn.Module):
@@ -17,10 +20,8 @@ class PCNLayer(nn.Module):
     def forward(self, input_data, feedback):
         # Initialize feedback with zeros
         feedback = torch.zeros(self.hidden_size)
-        
         # Forward pass (error computation)
         prediction_error = input_data - feedback
-        
         # Update feedback using error
         feedback = self.error(prediction_error)
         
@@ -29,7 +30,6 @@ class PCNLayer(nn.Module):
     def backward(self, feedback):
         # Initialize prediction with zeros
         prediction = torch.zeros(self.hidden_size)
-        
         # Backward pass (prediction computation)   
         prediction = self.prediction(feedback)
 
@@ -38,14 +38,14 @@ class PCNLayer(nn.Module):
     
 # Define the PCN class
 class PCN(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes=10):
         super(PCN, self).__init__()
         self.layers = nn.ModuleList([PCNLayer(input_size, hidden_size) for _ in range(num_layers)])
-        self.classifier = nn.Linear(hidden_size, num_layers) #placerholder
+        self.classifier = nn.Linear(hidden_size, num_classes)
+        self.classifier.requires_grad_(False) # Prevent the layer from being updated during training
         self.relu = nn.ReLU() #ReLu layers which can be added
         
     def forward(self, input_data):
-        
         feedback = torch.zeros_like(input_data)  # Initialize feedback signal
         
         # Forward pass through PCN layers
@@ -60,7 +60,8 @@ class PCN(nn.Module):
             return prediction
         
         # Classification layer
-        output = self.classifier() #placeholder ish atm
+        bottom_layer = self.classifier(prediction) #placeholder ish atm
+        return bottom_layer
 
    
 
@@ -106,5 +107,13 @@ for epoch in range(5):  # Train for 5 epochs (you can increase it for better per
             print('[%d, %5d] loss: %.3f' %
                   (epoch + 1, i + 1, running_loss / 100))
             running_loss = 0.0
+        losses.append(running_loss / len(trainloader))
 
+# Visualize the training loss
+plt.figure()
+plt.plot(losses)
+plt.title('Training Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.show()
 print('Finished Training')

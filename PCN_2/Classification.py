@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
 
@@ -14,7 +15,7 @@ class PCNLayer(nn.Module):
         super(PCNLayer, self).__init__()
         self.prediction = nn.Linear(hidden_size, input_size)
         self.error = nn.Linear(input_size, hidden_size)
-        self.state = torch.zeros(hidden_size) #placeholder for state, unsure what to do with this right now
+        self.state = torch.random(hidden_size) #state is just the tensor that is saved in the layer
         self.hidden_size = hidden_size
 
     def forward(self, input_data, feedback):
@@ -108,6 +109,24 @@ for epoch in range(5):  # Train for 5 epochs (you can increase it for better per
                   (epoch + 1, i + 1, running_loss / 100))
             running_loss = 0.0
         losses.append(running_loss / len(trainloader))
+
+
+def my_prediction_method(self, input_data):
+        # Define your own prediction method here
+        # For example, you can use a linear transformation followed by a softmax activation
+        weight = torch.nn.Parameter(torch.zeros())
+        bias = torch.nn.Parameter(torch.zeros())
+        output = F.linear(input_data, weight, bias)
+        output = F.softmax(output, dim=1)
+        return output
+
+def error_calculation(self, layer_state_1, prediction):
+        # Define your own error calculation method here
+        # For example, you can use the cross-entropy loss
+        error = layer_state_1 - prediction
+        return error
+
+
 
 # Visualize the training loss
 plt.figure()

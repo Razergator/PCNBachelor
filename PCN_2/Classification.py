@@ -9,7 +9,21 @@ import matplotlib.pyplot as plt
 
 losses = [] #list for visualizing loss
 
-# Define the PCNLayer class
+#defining all necessary methods here
+def predict(input_data):
+        prediction = torch.random() #placeholder
+        return prediction
+
+def error_calculation(layer_state_1, prediction):
+        error = layer_state_1 - prediction
+        return error
+
+def recalculate_state(state_self,error):
+        state = state_self + error #placeholder
+        return state
+
+
+# Define the PCNLayer class, maybe I only need to have self.state as a tensor and not the other variables
 class PCNLayer(nn.Module):
     def __init__(self, input_size, hidden_size):
         super(PCNLayer, self).__init__()
@@ -18,7 +32,7 @@ class PCNLayer(nn.Module):
         self.state = torch.random(hidden_size) #state is just the tensor that is saved in the layer
         self.hidden_size = hidden_size
 
-    def forward(self, input_data, feedback):
+    '''def forward(self, input_data, feedback):
         # Initialize feedback with zeros
         feedback = torch.zeros(self.hidden_size)
         # Forward pass (error computation)
@@ -26,15 +40,15 @@ class PCNLayer(nn.Module):
         # Update feedback using error
         feedback = self.error(prediction_error)
         
-        return feedback, prediction_error
+        return feedback, prediction_error'''
     
-    def backward(self, feedback):
+    '''def backward(self, feedback):
         # Initialize prediction with zeros
         prediction = torch.zeros(self.hidden_size)
         # Backward pass (prediction computation)   
         prediction = self.prediction(feedback)
 
-        return prediction
+        return prediction''' #most likely unnecessary
     
     
 # Define the PCN class
@@ -45,23 +59,27 @@ class PCN(nn.Module):
         self.classifier = nn.Linear(hidden_size, num_classes)
         self.classifier.requires_grad_(False) # Prevent the layer from being updated during training
         self.relu = nn.ReLU() #ReLu layers which can be added
+        self.bottom_layer = torch.zeros(hidden_size) #placeholder for now
         
     def forward(self, input_data):
         feedback = torch.zeros_like(input_data)  # Initialize feedback signal
         
         # Forward pass through PCN layers
-        for layer in self.layers:
-            prediction, feedback = layer(input_data, feedback)
-            feedback = self.relu(feedback) #add ReLu layer for non-linearity
-            
-        # Backward pass through PCN layers
-        for layer in list(reversed(self.layers)):
-            prediction = layer.backward(prediction)
-            
-            return prediction
-        
+        for _ in range(10): #first try at getting it cyclic, right now it just repeats multiple times
+            for i, layer in enumerate(self.layers):
+                #feedback = self.relu(feedback) #add ReLu layer for non-linearity
+
+                if i > 0 and i < len(self.layers) - 1: #if not first or last layer
+                    layer_i = self.layers[i]
+                    layer_previous = self.layers[i-1]
+                    prediction = predict(layer_previous)
+                    error = error_calculation(layer_i.state, prediction)
+                    layer_i.state = layer_i.state + error #update state of layer i
+
+       
+     
         # Classification layer
-        bottom_layer = self.classifier(prediction) #placeholder ish atm
+        bottom_layer = input_data #placeholder ish atm
         return bottom_layer
 
    
@@ -109,24 +127,6 @@ for epoch in range(5):  # Train for 5 epochs (you can increase it for better per
                   (epoch + 1, i + 1, running_loss / 100))
             running_loss = 0.0
         losses.append(running_loss / len(trainloader))
-
-
-def my_prediction_method(self, input_data):
-        # Define your own prediction method here
-        # For example, you can use a linear transformation followed by a softmax activation
-        weight = torch.nn.Parameter(torch.zeros())
-        bias = torch.nn.Parameter(torch.zeros())
-        output = F.linear(input_data, weight, bias)
-        output = F.softmax(output, dim=1)
-        return output
-
-def error_calculation(self, layer_state_1, prediction):
-        # Define your own error calculation method here
-        # For example, you can use the cross-entropy loss
-        error = layer_state_1 - prediction
-        return error
-
-
 
 # Visualize the training loss
 plt.figure()

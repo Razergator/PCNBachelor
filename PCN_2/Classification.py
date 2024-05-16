@@ -9,17 +9,17 @@ import matplotlib.pyplot as plt
 
 losses = [] #list for visualizing loss
 
-#defining all necessary methods here
-def predict(input_data):
+#defining all necessary methods here, maybe I need to put them into PCNLayer class, unsure yet
+def predict(layer_i):
         prediction = torch.random() #placeholder
         return prediction
 
-def error_calculation(layer_state_1, prediction):
-        error = layer_state_1 - prediction
+def error_calculation(layer_previous_state, prediction):
+        error = layer_previous_state - prediction
         return error
 
-def recalculate_state(state_self,error):
-        state = state_self + error #placeholder
+def recalculate_state(layer_i_state,error):
+        state = layer_i_state + error #placeholder
         return state
 
 
@@ -48,7 +48,8 @@ class PCNLayer(nn.Module):
         # Backward pass (prediction computation)   
         prediction = self.prediction(feedback)
 
-        return prediction''' #most likely unnecessary
+        return prediction''' #most likely unnecessary, I dont think I need the forward methode, due to the cyclic nature of the PCN,
+        #I can just call the predict method in the forward pass of the PCN class as needed, Ill still leave it in for now
     
     
 # Define the PCN class
@@ -72,9 +73,15 @@ class PCN(nn.Module):
                 if i > 0 and i < len(self.layers) - 1: #if not first or last layer
                     layer_i = self.layers[i]
                     layer_previous = self.layers[i-1]
-                    prediction = predict(layer_previous)
-                    error = error_calculation(layer_i.state, prediction)
-                    layer_i.state = layer_i.state + error #update state of layer i
+                    prediction = predict(layer_i)
+                    error = error_calculation(layer_previous.state,prediction)
+                    layer_i.state = recalculate_state(layer_i.state, error) #update state of layer i
+                    '''
+                    prediction = layer_i.predict()
+                    error = layer_previous.state(prediction)
+                    layer_i.recalculate_state(error)
+                    self.relu(layer_i.state) #add ReLu layer for non-linearity
+                    '''
 
        
      

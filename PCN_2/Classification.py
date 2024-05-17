@@ -10,17 +10,7 @@ import matplotlib.pyplot as plt
 losses = [] #list for visualizing loss
 
 #defining all necessary methods here, maybe I need to put them into PCNLayer class, unsure yet
-def predict(layer_i):
-        prediction = torch.random() #placeholder
-        return prediction
 
-def error_calculation(layer_previous_state, prediction):
-        error = layer_previous_state - prediction
-        return error
-
-def recalculate_state(layer_i_state,error):
-        state = layer_i_state + error #placeholder
-        return state
 
 
 # Define the PCNLayer class, maybe I only need to have self.state as a tensor and not the other variables
@@ -32,24 +22,20 @@ class PCNLayer(nn.Module):
         self.state = torch.random(hidden_size) #state is just the tensor that is saved in the layer
         self.hidden_size = hidden_size
 
-    '''def forward(self, input_data, feedback):
-        # Initialize feedback with zeros
-        feedback = torch.zeros(self.hidden_size)
-        # Forward pass (error computation)
-        prediction_error = input_data - feedback
-        # Update feedback using error
-        feedback = self.error(prediction_error)
-        
-        return feedback, prediction_error'''
-    
-    '''def backward(self, feedback):
-        # Initialize prediction with zeros
-        prediction = torch.zeros(self.hidden_size)
-        # Backward pass (prediction computation)   
-        prediction = self.prediction(feedback)
 
-        return prediction''' #most likely unnecessary, I dont think I need the forward methode, due to the cyclic nature of the PCN,
-        #I can just call the predict method in the forward pass of the PCN class as needed, Ill still leave it in for now
+        def predict(self):
+            prediction = torch.random() #placeholder
+            return prediction
+
+        def error_calculation(self, prediction):
+            error = self.state - prediction
+            return error
+
+        def recalculate_state(self,error):
+            state = self.state + error #placeholder
+            return state
+
+
     
     
 # Define the PCN class
@@ -63,28 +49,24 @@ class PCN(nn.Module):
         self.bottom_layer = torch.zeros(hidden_size) #placeholder for now
         
     def forward(self, input_data):
-        feedback = torch.zeros_like(input_data)  # Initialize feedback signal
-        
+        feedback = torch.zeros_like(input_data) # Initialize feedback signa
+        cycles = 10  #Number is subject to change
+        #feedback = self.relu(feedback) #add ReLu layer for non-linearity
+
         # Forward pass through PCN layers
-        for _ in range(10): #first try at getting it cyclic, right now it just repeats multiple times
-            for i, layer in enumerate(self.layers):
-                #feedback = self.relu(feedback) #add ReLu layer for non-linearity
+        for _ in range(cycles): #first try at getting it cyclic, right now it just repeats multiple times
+            predictions = []
+            errors = []
 
-                if i > 0 and i < len(self.layers) - 1: #if not first or last layer
-                    layer_i = self.layers[i]
-                    layer_previous = self.layers[i-1]
-                    prediction = predict(layer_i)
-                    error = error_calculation(layer_previous.state,prediction)
-                    layer_i.state = recalculate_state(layer_i.state, error) #update state of layer i
-                    '''
-                    prediction = layer_i.predict()
-                    error = layer_previous.state(prediction)
-                    layer_i.recalculate_state(error)
-                    self.relu(layer_i.state) #add ReLu layer for non-linearity
-                    '''
-
-       
-     
+            #First all the predictions are calculated, then the errors and then the states are recalculated, so I don't have to access multiple layers at once
+            for layer in self.layers:
+                predictions.append(layer.predict())
+            for i in range(len(self.layers)):
+                errors.append(self.layers[i].error_calculation(predictions[i]))
+            for i in range(len(self.layers)):
+                if i > 0: #First layer is fixed
+                    self.layers[i].state = self.layers[i].recalculate_state(errors[i])
+            
         # Classification layer
         bottom_layer = input_data #placeholder ish atm
         return bottom_layer

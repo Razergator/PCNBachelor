@@ -33,8 +33,9 @@ class PCNLayer(nn.Module):
         
         return error
 
-    def recalculate_state(self,error):
-        self.state = self.state
+    def recalculate_state(self,error, learning_rate = 0.01):
+        self.state = self.state - error
+        print(self.state)
 
         
         return self.state
@@ -48,11 +49,10 @@ class PCN(nn.Module):
         super(PCN, self).__init__()
         self.layers = nn.ModuleList([PCNLayer(input_size, hidden_size) for _ in range(num_layers)])
         self.classifier = nn.Linear(hidden_size, num_classes)
-        #self.classifier.requires_grad_(False) # Prevent the layer from being updated during training
         self.relu = nn.ReLU() #ReLu layers which can be added
         self.bottom_layer = torch.zeros(hidden_size) #placeholder for now
 
-        #self.layers[num_layers-1].state = torch.tensor([0,1,2,3,4,5,6,7,8,9]).float().requires_grad_(True) #placeholder for now
+        self.layers[num_layers-1].state = torch.tensor([0,1,2,3,4,5,6,7,8,9]).float().requires_grad_(True) #placeholder for now
         
         
         
@@ -75,7 +75,7 @@ class PCN(nn.Module):
                 if i > 0 and i < len(self.layers)-1:  #First layer and last layers are fixed
                     self.layers[i].state = self.layers[i].recalculate_state(errors[i])
         
-        out = self.layers[num_layers-1].state
+        out = self.classifier(self.layers[num_layers-1].state) #output of the last layer is the input for the classifier
 
         return out
             
@@ -112,7 +112,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(pcn_model.parameters(), lr=0.01)
 
 # Train the PCN model
-for epoch in range(5):  # Train for 5 epochs (you can increase it for better performance)
+'''for epoch in range(5):  # Train for 5 epochs (you can increase it for better performance)
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
         inputs, labels = data
@@ -134,7 +134,7 @@ for epoch in range(5):  # Train for 5 epochs (you can increase it for better per
             print('[%d, %5d] loss: %.3f' %
                   (epoch + 1, i + 1, running_loss / 100))
             running_loss = 0.0
-        losses.append(running_loss / len(trainloader))
+        losses.append(running_loss / len(trainloader))'''
 
 # Visualize the training loss
 

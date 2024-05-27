@@ -15,11 +15,12 @@ losses = [] #list for visualizing loss
 
 # Define the PCNLayer class, maybe I only need to have self.state as a tensor and not the other variables
 class PCNLayer(nn.Module):
-    def __init__(self, hidden_size, hidden_size_before, batch_size = 64):
+    def __init__(self, input_size, output_size, batch_size = 64):
         super(PCNLayer, self).__init__()
-        #self.state = torch.rand(hidden_size)#state is just the tensor that is saved in the layer
-        self.state = torch.rand(batch_size, hidden_size)
-        self.linear = nn.Linear(hidden_size, hidden_size_before, bias=False)#torch.ones((10, 10), requires_grad=True)
+        self.output = output_size
+        #self.state = torch.rand(batch_size, output_size)#state is just the tensor that is saved in the layer
+        #self.state = torch.rand(batch_size, hidden_size)
+        self.linear = nn.Linear(input_size, output_size, bias=False)#torch.ones((10, 10), requires_grad=True)
         self.relu = nn.ReLU()
         #self.hidden_size = hidden_size
     
@@ -27,13 +28,17 @@ class PCNLayer(nn.Module):
     
     def predict(self):
         relu_state = self.relu(self.state)
+        #print("State:", self.state.shape)
+        #print("self.linear:", relu_state.shape)
         prediction = self.linear(relu_state)
         #print("Prediction:", prediction.shape)
         return prediction
 
     def error_calculation(self, prediction):
+        print("prediction:", prediction.shape)
+        print("State:", self.state.shape)
         error = self.state - prediction
-        #print("Error:", error.shape)
+        
         return error
 
     def recalculate_state(self,error):
@@ -51,12 +56,17 @@ class PCNLayer(nn.Module):
 class PCN(nn.Module):
     def __init__(self, hidden_sizes):
         super(PCN, self).__init__()
+        self.hidden_sizes = hidden_sizes
         self.layers = nn.ModuleList()
         for i in range(len(hidden_sizes)):
             if i == 0:
+                print("i=0",hidden_sizes[i])
                 self.layers.append(PCNLayer(hidden_sizes[i],1))
+                print("layer:",self.layers[i])
             if i > 0:
+                print("i>0",hidden_sizes[i],hidden_sizes[i-1])
                 self.layers.append(PCNLayer(hidden_sizes[i],hidden_sizes[i-1]))
+                print("layer:",self.layers[i])
 
         
         #self.classifier = nn.Linear(hidden_size, num_classes)
@@ -68,9 +78,14 @@ class PCN(nn.Module):
     def forward(self, input_data):
         cycles = 10  #Number is subject to change
         #feedback = self.relu(feedback) #add ReLu layer for non-linearity
-        self.layers[0].state = input_data
+        #self.layers[0].state = input_data, dk how to fix rn
         # Forward pass through PCN layers
-        for _ in range(cycles): #first try at getting it cyclic, right now it just repeats multiple times
+        for i in range(len(self.layers)):
+            #if i > 0:
+            self.layers[i].state = torch.rand(64,self.hidden_sizes[i])
+            print("sizes", self.layers[i].state.shape) 
+
+        for _ in range(cycles): 
             predictions = []
             errors = []
 
@@ -82,10 +97,10 @@ class PCN(nn.Module):
             for i in range(len(self.layers)-1): #last layer no error
                 errors.append(self.layers[i].error_calculation(predictions[i]))
             for i in range(len(self.layers)):
-                if i > 0:  #First layer is fixed
-                    self.layers[i].recalculate_state(errors[i-1])
+                if i > 0 and i < 3:  #First layer is fixed
+                    self.layers[i].recalculate_state(errors[i])
         
-        out = self.layers[num_layers-1].state  #output of the last layer 
+        out = self.layers[len(self.layers)-1].state  #output of the last layer 
 
         return out
             
@@ -109,8 +124,19 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
 input_size = 28*28  # MNIST image size
 hidden_size = 10
 num_layers = 10
-pcn_model = PCN([784,100,100,10])
-pcn_model.forward(trainloader) #just to test if it works, add input data instead of trainloader
+pcn_model = PCN([700,100,100,100])
+for i, data in enumerate(trainloader):
+    # data is a tuple of (inputs, labels)
+    inputs, labels = data
+    pcn_model.forward(inputs)
+    # Now you can use inputs and labels
+    print(inputs)
+    print(labels)
+
+    # If you only want the first batch, you can break after the first iteration
+    if i == 0:
+        break
+ #just to test if it works, add input data instead of trainloader
 
 # Define the loss function and optimizer
 criterion = nn.CrossEntropyLoss()

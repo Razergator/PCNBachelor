@@ -10,7 +10,7 @@ import numpy as np
 
 losses = [] #list for visualizing loss
 
-W = torch.empty(64, 64) #duplikat bei recalculate state einfügen mit richtigen dimensionen
+W = torch.empty(64, 64) 
 torch.nn.init.xavier_uniform_(W)
 
 def relu_prime(x): #ReLu derivative is 1 if x > 0, 0 otherwise
@@ -18,8 +18,6 @@ def relu_prime(x): #ReLu derivative is 1 if x > 0, 0 otherwise
 
 #own optimizer will be defined here
 def matrix_update(learning_rate, error, state_1):#
-    #return learning_rate * (error * relu_prime(state_1).T)
-    #pass
     #print("error shape:", error.shape)
     #print("relu_prime(state_1).T shape:", relu_prime(state_1).T.shape)
     new_W = learning_rate * (error * relu_prime(state_1).T)
@@ -28,12 +26,12 @@ def matrix_update(learning_rate, error, state_1):#
     return new_W
     
 
-# Define the PCNLayer class, maybe I only need to have self.state as a tensor and not the other variables
+
 class PCNLayer(nn.Module):
     def __init__(self, input_size, output_size):
         super(PCNLayer, self).__init__()
         self.output = output_size
-        self.linear = nn.Linear(input_size, output_size, bias=False)#torch.ones((10, 10), requires_grad=True)
+        self.linear = nn.Linear(input_size, output_size, bias=False)
         self.relu = nn.ReLU()
     
     
@@ -50,7 +48,7 @@ class PCNLayer(nn.Module):
         
         return error
 
-    def recalculate_state(self, learning_rate, e_0,e_1, W): #e_i = errsor, W = weight_matrix, phi_prime = derivative of an activation function(here ReLu)
+    def recalculate_state(self, learning_rate, e_0,e_1, W): #e_i = error, W = weight_matrix, phi_prime = derivative of an activation function(here ReLu)
         phi_prime = relu_prime(self.state)
         #print("phi_prime",phi_prime.shape)
         #print("W.T@e_1",(W.T @ e_1).shape)
@@ -84,11 +82,9 @@ class PCN(nn.Module):
         
 
     def forward(self, input_data):
-        cycles = 10  #Number is subject to change
+        cycles = 10  
         
-        # Forward pass through PCN layers
         for i in range(len(self.layers)):
-            #if i > 0:
             self.layers[i].state = torch.rand(64,self.hidden_sizes[i])
             print("sizes", self.layers[i].state.shape) 
 
@@ -146,6 +142,8 @@ for epoch in range(5):
         
 
         # If you only want the first batch, you can break after the first iteration
+        if i==0:
+            break
        
 
 # Train the PCN model

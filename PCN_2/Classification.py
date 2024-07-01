@@ -16,8 +16,8 @@ run = neptune.init_run(
 
 model_path = './pcn_model.pth'
 
-def relu_prime(x):  # ReLu derivative is 1 if x > 0, 0 otherwise
-    #return 1 - torch.tanh(x)**2 #tanh derivative
+def relu_prime(x):  
+    #return 1 - torch.tanh(x)**2 #tanh derivative, used with xavier initialization
     return (x > 0).float() #relu derivative
 
 
@@ -101,8 +101,9 @@ class PCN(nn.Module):
             self.W = W
 
     def forward(self, input_data, batch_size, fixed = False): #add fixed parameter for toplayer, fixed im training, not fixed in inference, not fixed rest
-        cycles = 10000
+        cycles = 50
         self.layer_states = []
+        learning_rate = 0.01
         
 
         for i in range(len(self.layers)):
@@ -133,46 +134,32 @@ class PCN(nn.Module):
 
             for i in range(len(self.layers) - 1):  # last layer no error
                 self.errors.append(self.layers[i].error_calculation(predictions[i]))
-                #print("self.errors",self.errors[i])
-                #print("self.layers[i].state",self.layers[i])
-                #print("predictions[i]",predictions[i])
-                #print(self.errors[i])
-
 
             for i in range(1, len(self.layers)-1):
                 #pass
                 #print("i",i)
                 if fixed == False and i == len(self.layers)-1:
-                   self.layers[i].recalculate_state(0.1, e_0=0, e_1=self.errors[i-1], W=self.W[i], last = True)
-                    #print("i",i)
-                    #print("e_1",self.errors[i-1])
+                   self.layers[i].recalculate_state(learning_rate, e_0=0, e_1=self.errors[i-1], W=self.W[i], last = True)
                 else:
-                    self.layers[i].recalculate_state(0.1, e_0=self.errors[i], e_1=self.errors[i-1], W=self.W[i], last = False)
-                    #run["states"].append(self.layers[i])
-                    #print("self.layers", self.layers[i].state)
+                    self.layers[i].recalculate_state(learning_rate, e_0=self.errors[i], e_1=self.errors[i-1], W=self.W[i], last = False)
 
             for i in range(len(self.layers)):
                 self.layer_states.append(self.layers[i].state)
             
             for error in self.errors:
-                # Flatten the error tensor
                 error_flat = error.view(-1)
-                # Calculate a metric, e.g., mean squared error
-                mse = torch.mean(error_flat ** 2)
-                # Append the scalar value to the list
-                loss_values.append(mse)
+                se = (1/2) * torch.sum(error_flat ** 2) 
+                loss_values.append(se)
 
             # if top layer is not fixed as during inference, we need to update top layer as well, add eq(5) for top layer (l=max), e_+1 has to be e_l-1
             # if fixed: ...
             final_loss = torch.mean(torch.tensor(loss_values))
             run["loss"].append(final_loss)
-            #print("final_loss",final_loss)
         
         out = self.layers[len(self.layers) - 1].state  # output of the last layer
-        #print("self.layers",self.layers[len(self.layers)-1].state)
         return out
 
-    def matrix_recalc(self, layer, learning_rate=0.01):
+    def matrix_recalc(self, layer, learning_rate=0.1):
         if (layer < len(self.layers) - 2):
             self.W[layer+1] = learning_rate * (self.errors[layer].T @ relu_prime((self.layers[layer + 1]).state)) 
 
@@ -201,25 +188,16 @@ with torch.no_grad():
             # data is a tuple of (inputs, labels)
             inputs, labels = data
             inputs = torch.flatten(inputs, start_dim=1)
-            pcn_model.forward(inputs, batch_size, fixed = False)
+            pcn_model.forward(inputs, batch_size, fixed = True)
             for j in range(len(pcn_model.layers)):
-                #print("layer",j)
                 pcn_model.matrix_recalc(j)
-            #print("inputs:",inputs.shape)
-            #print("train",enumerate(trainloader))
-            #print("i",i)
-            #states = pcn_model.layer_states
-            #for state in states:
-            #    test = state
-                #print("state",state)
-                #run["states"].append(state)
-            #run["states"].append(states)
+            
 
             # If you only want the first batch, you can break after the first iteration
-            if i == 0:
-              break
+            #if i == 0:
+            #  break
     
-#run.stop()
+run.stop()
 print('Finished Training')
 torch.save(pcn_model.state_dict(), model_path)
 run['model_weights'].upload(model_path)

@@ -25,22 +25,6 @@ DATA_DIR = Path(__file__).parents[1] / 'data'
 DATA_DIR.mkdir(exist_ok=True)
 model_path = DATA_DIR / 'pcn_model.pth'  # JR: for consistent paths
 
-'''def visualize_predictions(loader, model, num_images=1): #Prediction speichern/abrufen, 
-    dataiter = iter(loader)
-    images, labels = next(dataiter)
-    images = torch.flatten(inputs, start_dim=1)
-    outputs, imagepredictions = model(images, batch_size=64) #outputs, imagepredictions = ; 784 -> 28x28 -> 1 x 28 x 28
-    img = imagepredictions[0].view(1,28,28)
-    img = img.permute(1,2,0)
-    # Plotting
-    fig, axes = plt.subplots(1, num_images, figsize=(12, 3))
-    #for idx in range(num_images):
-    ax = axes
-    #img = images[0].permute(1, 2, 0)  # Reorder dimensions for plotting
-    ax.imshow(img.numpy())
-    ax.set_title(f'Predicted: {predicted[0]}') # 0 = idx
-    ax.axis('off')
-    plt.show() #vlt einrücken'''
 def visualize_predictions(inputs, model, labels=None, num_images=5):
     model.eval()
     
@@ -113,7 +97,7 @@ class PCNLayer(nn.Module):
 
 
 # Define the PCN class
-class PCN(nn.Module): #Netzwerk "rückwärts" aufbauen, von letztem Layer zum ersten Layer, Error per Layer anschauen
+class PCN(nn.Module):
     def __init__(self, hidden_sizes, W=None):
         super(PCN, self).__init__()
         self.hidden_sizes = hidden_sizes
@@ -148,7 +132,7 @@ class PCN(nn.Module): #Netzwerk "rückwärts" aufbauen, von letztem Layer zum er
             self.layers[i].state = state_tensor #xavier initilization
             #n_in = self.hidden_sizes[i - 1]
             #he_std = math.sqrt(2. / n_in)
-            #self.layers[i].state = torch.rand(batch_size, self.hidden_sizes[i]) * he_std
+            #self.layers[i].state = torch.rand(batch_size, self.hidden_sizes[i]) * he_std #He initilization
          
         self.layers[0].state = input_data
         if logits is not None:
@@ -185,7 +169,6 @@ class PCN(nn.Module): #Netzwerk "rückwärts" aufbauen, von letztem Layer zum er
 
            
             final_loss = torch.mean(torch.tensor(loss_values))
-            #run["inference/loss"].append(final_loss)
         if val:
             run["val/loss"].append(final_loss)
         else:

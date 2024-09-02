@@ -1,0 +1,3 @@
+This is a repo for the bachelor's thesis "Analysis of Classification-Reconstruction Trade-off in Predictive Coding Networks". It contains the PCN_2 folder, which contains the PCN_forward file, which is the file that includes the forward predictive coding network used in the thesis.
+
+The PCN_forward file is ready to be run without any changes, but as you desire you can change the function "activation_function_prime" depending on which derivative of which activation function you need, self.activationfunction() can also be changed to fit your chosen activation function. Cycles, learning rate and update rate can also be changed. 

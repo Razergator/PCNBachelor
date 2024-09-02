@@ -25,7 +25,7 @@ DATA_DIR = Path(__file__).parents[1] / 'data'
 DATA_DIR.mkdir(exist_ok=True)
 model_path = DATA_DIR / 'pcn_model.pth'  # JR: for consistent paths
 
-def visualize_predictions(loader, model, num_images=1): #Prediction speichern/abrufen, 
+'''def visualize_predictions(loader, model, num_images=1): #Prediction speichern/abrufen, 
     dataiter = iter(loader)
     images, labels = next(dataiter)
     images = torch.flatten(inputs, start_dim=1)
@@ -40,11 +40,29 @@ def visualize_predictions(loader, model, num_images=1): #Prediction speichern/ab
     ax.imshow(img.numpy())
     ax.set_title(f'Predicted: {predicted[0]}') # 0 = idx
     ax.axis('off')
-    plt.show() #vlt einrücken
+    plt.show() #vlt einrücken'''
+def visualize_predictions(inputs, model, labels=None, num_images=5):
+    model.eval()
+    
+    with torch.no_grad():
+        outputs, imagepredictions = model(inputs, batch_size=64, fixed=True, logits=None)
+    
+    images = inputs.view(-1, 1, 28, 28).cpu()
+    
+    
+    fig, axes = plt.subplots(1, num_images, figsize=(12, 3))
+    for i in range(num_images):
+        ax = axes[i]
+        img = images[i].permute(1, 2, 0).squeeze()
+        ax.imshow(img, cmap='gray')
+        if labels is not None:
+            ax.set_title(f'Label: {labels[i].item()}')
+        ax.axis('off')
+    plt.show()
 
 
 
-def relu_prime(x):
+def activation_function_prime(x):
     #return 1 - torch.tanh(x)**2 #tanh derivative, used with xavier initialization
     #return (x > 0).float()  # relu derivative
     sigmoid = torch.sigmoid(x)
@@ -55,10 +73,10 @@ class PCNLayer(nn.Module):
     def __init__(self, input_size, output_size):
         super(PCNLayer, self).__init__()
         self.output = output_size
-        self.relu = nn.Sigmoid()
+        self.activationfunction = nn.Sigmoid() #nn.ReLU(), nn.Sigmoid()
 
     def predict(self, W):
-        relu_state = self.relu(self.state)
+        relu_state = self.activationfunction(self.state)
         prediction = relu_state @ W.T
         return prediction
 
@@ -68,7 +86,7 @@ class PCNLayer(nn.Module):
 
     def recalculate_state(self, learning_rate, e_0, e_1, W,
                           last): 
-        phi_prime = relu_prime(self.state)
+        phi_prime = activation_function_prime(self.state)
 
         if last == True:
             pass
@@ -102,7 +120,7 @@ class PCN(nn.Module): #Netzwerk "rückwärts" aufbauen, von letztem Layer zum er
         self.layers = nn.ModuleList()
         self.errors = []
         self.layer_states = []
-        self.relu = nn.Sigmoid()
+        self.activationfunction = nn.Sigmoid() #nn.ReLU(), nn.Sigmoid()
 
         for i in range(len(hidden_sizes)):
             if i == 0:
@@ -110,7 +128,6 @@ class PCN(nn.Module): #Netzwerk "rückwärts" aufbauen, von letztem Layer zum er
             if i > 0:
                 self.layers.append(PCNLayer(hidden_sizes[i], hidden_sizes[i - 1]))
         if W == None:
-            #self.W = [torch.nn.Parameter(torch.empty((hidden_sizes[i - 1], hidden_sizes[i]))) for i in range(len(self.layers))]
             self.W = [torch.ones((hidden_sizes[i - 1], hidden_sizes[i])) for i in range(len(self.layers))]
             self.W[0] = None
             for i in range(1, len(self.layers)):
@@ -120,15 +137,6 @@ class PCN(nn.Module): #Netzwerk "rückwärts" aufbauen, von letztem Layer zum er
         else:
             self.W = W
         
-          # He initilization
-            #state_tensor = torch.empty(batch_size, self.hidden_sizes[i])
-            #torch.nn.init.kaiming_uniform_(state_tensor, mode='fan_in', nonlinearity='relu')
-            #self.layers[i].state = state_tensor
-            #state_tensor = torch.Tensor(batch_size, self.hidden_sizes[i])
-            #torch.nn.init.xavier_uniform_(state_tensor)
-            #self.layers[i].state = state_tensor #xavier initilization
-
-       
 
     def forward(self, input_data, batch_size, fixed=False, logits=None, update_rate=0.001, val = False):
         cycles = 60
@@ -190,7 +198,7 @@ class PCN(nn.Module): #Netzwerk "rückwärts" aufbauen, von letztem Layer zum er
 
     def matrix_recalc(self, layer, learning_rate=0.01):  #
         if (layer < len(self.layers) - 1):  
-            relulayer = self.relu(self.layers[layer + 1].state)
+            relulayer = self.activationfunction(self.layers[layer + 1].state)
             self.W[layer + 1] += learning_rate * (self.errors[layer].T @ relulayer)/self.errors[0].shape[0] 
             
 
@@ -232,7 +240,7 @@ update_rate = 0.001
 
 
 #with torch.no_grad():
-for epoch in range(50): # JR: increased epochs
+for epoch in range(1): 
     pcn_model.train()
     for i, data in enumerate(trainloader):
         # data is a tuple of (inputs, labels)
@@ -242,6 +250,9 @@ for epoch in range(50): # JR: increased epochs
         for j in range(len(pcn_model.layers)):
             pcn_model.matrix_recalc(j)
         print("Epoch: ", epoch, "Batch: ", i)
+    #if epoch == 49:
+    #    for i in range(2):
+    #        visualize_predictions(inputs, pcn_model, labels)
 
 
     val_loss = 0.0
@@ -269,17 +280,9 @@ for epoch in range(50): # JR: increased epochs
     accuracy = 100 * correct_predictions / total_predictions
     run["val/accuracy"].append(accuracy)
 
-#model = PCN([28 * 28, 100, 100, 10])
-#model.load_state_dict(torch.load('pcn_model.pth'))
-#model.eval()
-#visualize_predictions(valloader, pcn_model)
-
-
-
-
 
 print('Finished Training')
-#torch.save(pcn_model.state_dict(), model_path)
+torch.save(pcn_model.state_dict(), model_path)
 run['model_weights'].upload(str(model_path))
 #print(f'Model saved to {model_path}')
 run.stop()
